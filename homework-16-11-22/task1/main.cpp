@@ -19,6 +19,7 @@ int main() {
         pid_t child2_pid;
         read(fd_child2[0], &child2_pid, sizeof(pid_t));
         std::cout << "pid child2 from child1: " << child2_pid << "\n";
+	close(fd_child2[0]);
     }
     else if (fork() == 0) {
         // child process 2
@@ -32,6 +33,7 @@ int main() {
         pid_t child1_pid;
         read(fd_child1[0], &child1_pid, sizeof(pid_t));
         std::cout << "pid child1 from child2: " << child1_pid << "\n";
+    	close(fd_child1[0]);
     }
     else {
         close(fd_child1[0]);
