@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>  
+#include <pthread.h>
 
 struct OperationCalculator {
     explicit OperationCalculator(int num1, int num2, const char* operation):
@@ -59,39 +60,51 @@ private:
     int num2_;
 };
 
+struct ArgumentsForThreads {
+    std::size_t thread_index;
+    int num1;
+    int num2;
+    char* operation;
+};
+
+void* CreateFileAndWriteOperation(void* args) {
+    auto arguments = static_cast<ArgumentsForThreads*>(args);
+
+    OperationCalculator calculator{arguments->num1, arguments->num2, arguments->operation};
+
+    std::string filename{"out_"};
+    filename += std::to_string(arguments->thread_index + 1);
+    filename += ".txt";
+    
+    auto fd = open(filename.c_str(), O_CREAT | O_WRONLY, 0666);
+
+    auto file_text = calculator.ToString();
+    
+    write(fd, file_text.c_str(), sizeof(char) * file_text.length());
+    return nullptr;
+}
+
 int main(int argc, char** argv) {
     if (argc <= 2 and (argc - 2) % 3 != 0) {
         return 1;
     }   
     
-    auto number_of_pids = std::atoi(argv[1]);
+    auto number_of_threads = std::atoi(argv[1]);
 
-    std::vector<pid_t> pids(number_of_pids);
+    std::vector<pthread_t> threads(number_of_threads);
+    std::vector<ArgumentsForThreads> arguments(number_of_threads);
     
-    for (std::size_t i = 0; i < pids.size(); ++i) {
-        if (fork() == 0){
-            pids[i] = getpid();
-        }
+    for (std::size_t i = 0; i < threads.size(); ++i) {
+        arguments[i].thread_index = i;
+        arguments[i].num1 = std::atoi(argv[2 + i * 3]);
+        arguments[i].num2 = std::atoi(argv[2 + i * 3 + 1]);
+        arguments[i].operation = argv[2 + i * 3 + 2];
 
-        if (getpid() == pids[i]) {
-            int num1 = std::atoi(argv[2 + i * 3]);
-            int num2 = std::atoi(argv[2 + i * 3 + 1]);
-            char* operation = argv[2 + i * 3 + 2];
+        pthread_create( &threads[i], NULL, CreateFileAndWriteOperation, &arguments[i]);
+    }
 
-            OperationCalculator calculator{num1, num2, operation};
-
-            std::string filename{"out_"};
-            filename += std::to_string(i+1);
-            filename += ".txt";
-            
-            auto fd = open(filename.c_str(), O_CREAT | O_WRONLY, 0666);
-
-            auto file_text = calculator.ToString();
-            
-            write(fd, file_text.c_str(), sizeof(char) * file_text.length());
-
-            close(fd);
-        }
+    for (auto& thread : threads) {
+        pthread_join(thread, NULL);
     }
 
     return 0;

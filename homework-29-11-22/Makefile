@@ -1,2 +1,2 @@
 all:
-	g++ main.cpp -o main
+	g++ -lpthread main.cpp -o main
