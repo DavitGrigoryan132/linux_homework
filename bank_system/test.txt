@@ -1,0 +1,14 @@
+fill_all 2000
+print_current_balance 0
+print_current_balance 1
+freeze 0
+freeze 1
+transfer 0 1 2000
+unfreeze 0
+unfreeze 1
+transfer 0 1 1000
+print_min_balance 0
+print_max_balance 1
+set_min 0 1000
+set_max 1 20000
+withdraw_all 1000
